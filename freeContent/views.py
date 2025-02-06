@@ -4,12 +4,25 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django.contrib.auth import authenticate
 from .serializer import RegisterUser,LoginSerializer
-from .models import UserRegistration
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.models import User
 
 class Register(ModelViewSet):
-    serializer_class=RegisterUser
-    queryset=UserRegistration.objects.all()
+    queryset = User.objects.all()  # Add this line
+    serializer_class = RegisterUser
+    def create(self, request):
+        data = request.data 
+        serializer = RegisterUser(data=data)
+        if not serializer.is_valid():
+            return Response({
+                'status': False,
+                'message': serializer.errors
+            })
+        serializer.save()
+        return Response({
+            'status': True,
+            'message': 'User created'
+        })        
 # Create your views here.
 
 class Login(APIView):
@@ -20,8 +33,9 @@ class Login(APIView):
         if serializer.is_valid():
             email=serializer.data["email"]
             password=serializer.data["password"]
-            user=UserRegistration.objects.get(email=email)
-            if user is None or user.password!=password:
+            user=authenticate(email=email,password=password)
+            print(email,password)
+            if user is None:
                 return Response({
                     'message':"Invalid Credentials",
                     'data':{}})
